@@ -14,6 +14,14 @@
         android:textSize="18sp"
         android:gravity="center"
         android:textColor="#fafafa"/>
+    <Button
+        android:id="@+id/btnToSearch"
+        android:layout_width="60dp"
+        android:layout_height="50dp"
+        android:layout_alignParentRight="true"
+        android:background="@null"
+        android:textColor="#fafafa"
+        android:text="搜索" />
     <RadioGroup
         android:id="@+id/rg1"
         android:layout_below="@+id/tv1"
@@ -135,6 +143,7 @@
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
             android:layout_marginLeft="10dp"
+            style="@style/Widget.SeekBar.Normal"
             android:layout_marginRight="10dp"
             android:layout_below="@+id/tvPMLrc" />
 
@@ -203,6 +212,54 @@
             android:layout_alignParentTop="true"
             android:layout_centerHorizontal="true" />
 
+    </RelativeLayout>
+    <RelativeLayout
+        android:id="@+id/rlSearch"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="invisible"
+        android:background="#ffffff" >
+
+        <LinearLayout
+            android:id="@+id/linearLayout1"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:background="#2b4b52" >
+
+            <Button
+                android:id="@+id/btnCancel"
+                android:layout_width="60dp"
+                android:layout_height="50dp"
+                android:background="@null"
+                android:text="取消"
+                android:textColor="#ffffff" />
+
+            <EditText
+                android:id="@+id/etSearch"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@null"
+                android:ems="10"
+                android:hint="关键字..."
+                android:textColorHint="#cccccc" >
+            </EditText>
+
+            <Button
+                android:id="@+id/btnSearch"
+                android:layout_width="60dp"
+                android:layout_height="50dp"
+                android:background="@null"
+                android:text="搜索"
+                android:textColor="#ffffff" />
+        </LinearLayout>
+
+        <ListView
+            android:id="@+id/lvSearchResult"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_below="@+id/linearLayout1" >
+        </ListView>
     </RelativeLayout>
 
 

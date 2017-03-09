@@ -22,7 +22,10 @@ import android.view.animation.Animation;
 import android.view.animation.LinearInterpolator;
 import android.view.animation.RotateAnimation;
 import android.view.animation.ScaleAnimation;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.ListView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.RelativeLayout;
@@ -31,6 +34,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.adam.suixinplayer.R;
+import com.adam.suixinplayer.adapter.SearchMusicAdapter;
 import com.adam.suixinplayer.app.MusicApplication;
 import com.adam.suixinplayer.entity.Music;
 import com.adam.suixinplayer.entity.SongInfo;
@@ -38,6 +42,7 @@ import com.adam.suixinplayer.entity.SongUrl;
 import com.adam.suixinplayer.fragment.HotMusicListFragment;
 import com.adam.suixinplayer.fragment.NewMusicListFragment;
 import com.adam.suixinplayer.model.LrcCallback;
+import com.adam.suixinplayer.model.MusicListCallback;
 import com.adam.suixinplayer.model.MusicModel;
 import com.adam.suixinplayer.model.SongInfoCallback;
 import com.adam.suixinplayer.service.PlayMusicService;
@@ -46,6 +51,7 @@ import com.adam.suixinplayer.util.BitmapCallback;
 import com.adam.suixinplayer.util.BitmapUtils;
 import com.adam.suixinplayer.util.DateUtils;
 import com.adam.suixinplayer.util.GlobalConsts;
+import com.adam.suixinplayer.util.UrlFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -64,7 +70,7 @@ public class MainActivity extends FragmentActivity{
     private MusicInfoReceiver receiver;
     private CircleImageView civBBPic;
     private TextView tvBBtitle;
-
+    //播放界面控件
     private RelativeLayout rlPlayMusic;
     private TextView tvPMTotalTime,tvPMCurrentTime,tvPMSong,tvPMSinger,tvPMLrc;
     private SeekBar seekBar ;
@@ -73,7 +79,14 @@ public class MainActivity extends FragmentActivity{
     private PlayMusicService.MusicBinder binder;
     private MusicModel model;
 
+
     private PlayMusicService service = new PlayMusicService();
+
+    //搜索界面控件
+    private Button btnToSearch,btnSearching,btnCancel;
+    private EditText etSearch;
+    private RelativeLayout rlSearch;
+    private ListView lvSearchResult;
 
 
     @Override
@@ -113,7 +126,9 @@ public class MainActivity extends FragmentActivity{
             ScaleAnimation anim = new ScaleAnimation(1, 0, 1, 0, 0, rlPlayMusic.getHeight());
             anim.setDuration(300);
             rlPlayMusic.startAnimation(anim);
-        }else {//不在播放界面，则按照返回键的正常规则返回
+        } else if (rlSearch.getVisibility() == View.VISIBLE) {//如果是在搜索界面，则将播放界面隐藏
+            rlSearch.setVisibility(View.INVISIBLE);
+        } else {//不在播放界面，则按照返回键的正常规则返回
             //断开service中的thread 避免出现illegalStateException
             service.stopThread();
             super.onBackPressed();
@@ -160,6 +175,40 @@ public class MainActivity extends FragmentActivity{
      * 设置监听器
      */
     private void setListeners() {
+        //为搜索界面的搜索按钮设置监听器
+        btnSearching.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String keyword = etSearch.getText().toString();
+                if (keyword == null || keyword.equals("")) {
+                    Toast.makeText(MainActivity.this, "请输入关键词", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                model.searchMusicList(keyword, new MusicListCallback() {
+                    @Override
+                    public void onMusicLoaded(List<Music> musics) {
+                        SearchMusicAdapter adapter = new SearchMusicAdapter(MainActivity.this,musics);
+                        lvSearchResult.setAdapter(adapter);
+                    }
+                });
+            }
+        });
+        //为搜索按钮设置监听器，跳转到搜索界面
+        btnToSearch.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                rlSearch.setVisibility(View.VISIBLE);
+
+            }
+        });
+        //为取消按钮设置监听器
+        btnCancel.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                rlSearch.setVisibility(View.INVISIBLE);
+            }
+        });
         //给relativeLayout设置onTouch，拦截事件
         rlPlayMusic.setOnTouchListener(new View.OnTouchListener() {
             @Override
@@ -310,6 +359,14 @@ public class MainActivity extends FragmentActivity{
         ivPMAlbum = (ImageView) findViewById(R.id.ivPMAlbum);
         ivPMBackground = (ImageView) findViewById(R.id.ivPMBackground);
         seekBar = (SeekBar) findViewById(R.id.seekBar);
+
+        btnToSearch = (Button) findViewById(R.id.btnToSearch);
+        btnSearching = (Button) findViewById(R.id.btnSearch);
+        btnCancel = (Button) findViewById(R.id.btnCancel);
+        etSearch = (EditText) findViewById(R.id.etSearch);
+        rlSearch = (RelativeLayout) findViewById(R.id.rlSearch);
+        lvSearchResult = (ListView) findViewById(R.id.lvSearchResult);
+
     }
     class MainPagerAdapter extends FragmentPagerAdapter{
 
@@ -428,6 +485,10 @@ public class MainActivity extends FragmentActivity{
                 tvPMSong.setText(m.getSongInfo().getTitle());
                 tvPMSinger.setText(m.getSongInfo().getAuthor());
                 //下载歌词，并解析
+                if (m.getLrc()!=null) {//歌词已经下载过了
+                    return;
+                }
+
                 String lrcLink=m.getSongInfo().getLrclink();
                 if (lrcLink == null||lrcLink.equals("")) {
                     Toast.makeText(context, "该歌曲没有歌词",Toast.LENGTH_LONG).show();

@@ -1,5 +1,6 @@
 package com.adam.suixinplayer.util;
 
+import com.adam.suixinplayer.entity.Music;
 import com.adam.suixinplayer.entity.SongInfo;
 import com.adam.suixinplayer.entity.SongUrl;
 
@@ -15,6 +16,24 @@ import java.util.List;
  * Created by Administrator on 2017/3/2.
  */
 public class JsonParser {
+    /**
+     * 解析JsonArray得到音乐列表 List<Music>
+     * @param jsonArray
+     * @return
+     */
+    public static List<Music> parseMusicList(JSONArray jsonArray) throws JSONException {
+        List<Music> musics = new ArrayList<>();
+        for(int i = 0 ;i<jsonArray.length();i++) {
+            JSONObject jsonObject = jsonArray.getJSONObject(i);
+            Music music = new Music();
+            music.setTitle(jsonObject.getString("title").replace("</em>","").replace("<em>",""));
+            music.setSong_id(jsonObject.getString("song_id"));
+            music.setAuthor(jsonObject.getString("author").replace("</em>","").replace("<em>",""));
+            music.setArtist_id(jsonObject.getString("artist_id"));
+            musics.add(music);
+        }
+        return musics;
+    }
     /**
      * 解析jsonArray获得songUrls
      *
@@ -84,4 +103,6 @@ public class JsonParser {
         );
         return songInfo;
     }
+
+
 }

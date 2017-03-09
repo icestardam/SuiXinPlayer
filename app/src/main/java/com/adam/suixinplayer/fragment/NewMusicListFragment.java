@@ -6,8 +6,10 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.ListView;
+import android.widget.Toast;
 
 import com.adam.suixinplayer.R;
 import com.adam.suixinplayer.adapter.MusicAdapter;
@@ -37,7 +39,7 @@ public class NewMusicListFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_music_list, null);
         initViews(view);
         musicModel = new MusicModel();
-        musicModel.loadNewMusicList(0,50,new MusicListCallback(){
+        musicModel.loadNewMusicList(0,20,new MusicListCallback(){
 
             @Override
             public void onMusicLoaded(List<Music> musics) {
@@ -50,11 +52,63 @@ public class NewMusicListFragment extends Fragment {
     }
     //添加监听器
     private void setListener() {
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        //设置滚动listview时的监听器
+        listView.setOnScrollListener(new AbsListView.OnScrollListener() {
+
+            boolean isBottom = false;
+            boolean requesting =false;//避免重复加载
+
             @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                //将musics 和 position存入app中
-                MusicApplication application =MusicApplication.getApp();
+                public void onScrollStateChanged(AbsListView view, int scrollState) {
+                Log.i("info", "onScrollStateChanged "+isBottom);
+                    switch (scrollState) {
+                        case SCROLL_STATE_IDLE:
+                            if (isBottom && !requesting) {
+                                requesting = true;
+                                int offset = NewMusicListFragment.this.musics.size();
+                                musicModel.loadNewMusicList(offset, 20, new MusicListCallback() {
+                                    @Override
+                                    public void onMusicLoaded(List<Music> musics) {
+                                        if (musics == null || musics.isEmpty()) {//服务端没有数据了
+                                            Toast.makeText(getActivity(), "没有数据了", Toast.LENGTH_LONG).show();
+                                            requesting = false;
+                                            return;
+
+                                        }
+                                        NewMusicListFragment.this.musics.addAll(musics);
+                                        adapter.notifyDataSetChanged();
+                                        requesting= false;
+                                    }
+                                });
+                            }
+                            break;
+                        case SCROLL_STATE_FLING:
+                            break;
+                        case SCROLL_STATE_TOUCH_SCROLL:
+                            break;
+                    }
+                }
+            @Override
+            public void onScroll(AbsListView view,
+                                 int firstVisibleItem,//第一个可见控件的position
+                                 int visibleItemCount,//可见控件的数量
+                                 int totalItemCount) {
+                Log.i("info", "onScroll "+isBottom);
+                if (firstVisibleItem + visibleItemCount == totalItemCount&&totalItemCount>0) {
+                    isBottom=true;
+                }else {
+                    isBottom= false;
+                }
+
+            }
+
+
+            });
+            listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                    //将musics 和 position存入app中
+                    MusicApplication application =MusicApplication.getApp();
                 application.setMusics(musics);
                 application.setPosition(position);
 

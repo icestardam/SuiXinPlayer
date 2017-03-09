@@ -30,6 +30,7 @@ public class HttpUtils  {
 
     /**
      * 将is转成String
+     *  用于json解析中
      * @param is 输入流
      * @return
      */

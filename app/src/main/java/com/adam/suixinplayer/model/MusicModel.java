@@ -3,6 +3,7 @@ package com.adam.suixinplayer.model;
 import android.os.AsyncTask;
 import android.util.Log;
 
+import com.adam.suixinplayer.app.MusicApplication;
 import com.adam.suixinplayer.entity.Music;
 import com.adam.suixinplayer.entity.SongInfo;
 import com.adam.suixinplayer.entity.SongUrl;
@@ -15,8 +16,11 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.List;
 
@@ -24,6 +28,38 @@ import java.util.List;
  * Created by Administrator on 2017/2/28.
  */
 public class MusicModel {
+    /**
+     * 异步加载音乐搜索列表
+     * @param keyword
+     * @param musicListCallback
+     */
+    public void searchMusicList(final String keyword, final MusicListCallback musicListCallback) {
+        AsyncTask<String ,String,List<Music>> task = new AsyncTask<String, String, List<Music>>() {
+            @Override
+            protected List<Music> doInBackground(String... params) {
+                try {
+                    String url = UrlFactory.getSearchMusicUrl(keyword);
+                    InputStream is = HttpUtils.getInputStream(url);
+                    String json = HttpUtils.is2String(is);
+                    //json :{ songlist:[{},{},{}]}
+                    JSONObject jsonObject = new JSONObject(json);
+                    JSONArray songList = jsonObject.getJSONArray("song_list");
+                    List<Music> musics = JsonParser.parseMusicList(songList);
+                    return musics;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return null;
+            }
+
+            @Override
+            protected void onPostExecute(List<Music> result) {
+                musicListCallback.onMusicLoaded(result);
+            }
+        };
+        task.execute();
+
+    }
     /**
      * 异步加载音乐信息
      * @param songId    歌曲的id
@@ -109,11 +145,35 @@ public class MusicModel {
             @Override
             protected HashMap<String, String> doInBackground(String... params) {
                 try {
-                    InputStream is = HttpUtils.getInputStream(lrcPath);
+                    if (lrcPath == null || lrcPath.equals("")) {
+                        return null;
+                    }
+                    //声明歌词缓存文件对象
+                    String fileName = lrcPath.substring(lrcPath.lastIndexOf("/"));
+                    File file = new File(MusicApplication.getApp().getCacheDir(), "lrc" + fileName);
+                    PrintWriter out = null;
+                    if(!file.getParentFile().exists()){//父目录不存在
+                        file.getParentFile().mkdirs();
+                    }
+                    InputStream is = null;
+                    boolean isFromFile = false;
+                    if (file.exists()) {//在缓存目录中已经存在了
+                        is = new FileInputStream(file);
+                        isFromFile = true;
+                    }else{//缓存目录中没有
+                        is = HttpUtils.getInputStream(lrcPath);
+                        out = new PrintWriter(file);
+                        isFromFile=false;
+                    }
+
                     BufferedReader reader = new BufferedReader(new InputStreamReader(is));
                     String line = null;
                     HashMap<String, String> lrc = new HashMap<>();
                     while ((line = reader.readLine()) != null) {
+                        if (!isFromFile) {//将歌词文件保存至手机中
+                            out.println(line);
+                            out.flush();
+                        }
                         if (!line.startsWith("[")||!line.contains(":")||!line.contains(".")) {
                             continue;
                         }
@@ -121,6 +181,9 @@ public class MusicModel {
                         String time = line.substring(1, line.indexOf(".") );
                         String lyric = line.substring(line.lastIndexOf("]") + 1);
                         lrc.put(time, lyric);
+                    }
+                    if (out != null) {
+                        out.close();
                     }
                     return lrc;
 
@@ -138,6 +201,7 @@ public class MusicModel {
         task.execute();
 
     }
+
 
 
 }
